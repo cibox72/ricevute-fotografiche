@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gestione Ricevute - G&L Studio</title>
+  <style>
+    :root {
+      --primary: #2c3e50;
+      --secondary: #3498db;
+      --light: #ecf0f1;
+      --success: #27ae60;
+      --danger: #e74c3c;
+      --border-radius: 8px;
+      --box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      background-color: #f5f7fa;
+      color: #333;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+    }
+    h1 {
+      color: var(--primary);
+      margin-bottom: 10px;
+    }
+    .hero {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .btn {
+      padding: 12px 25px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn:hover {
+      opacity: 0.9;
+    }
+    .btn-primary {
+      background-color: var(--secondary);
+      color: white;
+    }
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+    }
+    .card h2 {
+      color: var(--primary);
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--secondary);
+    }
+    .search-box {
+      margin-bottom: 20px;
+    }
+    .archive-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .archive-item {
+      padding: 15px;
+      border: 1px solid #eee;
+      border-radius: 6px;
+      background: #fafafa;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .archive-item:hover {
+      background: #f0f7ff;
+    }
+    .actions {
+      display: flex;
+      gap: 15px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>📸 Gestione Ricevute Fotografiche</h1>
+    <p>Studio Fotografico G&L – Canicattì (AG)</p>
+  </header>
+
+  <div class="hero">
+    <button class="btn btn-primary" onclick="window.location.href='ricevuta.html'">➕ Nuova Ricevuta</button>
+    <div class="actions">
+      <button class="btn" onclick="backupDati()">💾 Backup Dati</button>
+      <button class="btn" onclick="ripristinaDati()">📤 Ripristina Dati</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Archivio Ricevute</h2>
+    <div class="search-box">
+      <input type="text" id="ricerca" placeholder="Cerca per nome cliente..." onkeyup="filtraRicevute()">
+    </div>
+    <div class="archive-list" id="listaRicevute">
+      <!-- Le ricevute verranno caricate qui -->
+    </div>
+  </div>
+
+  <script>
+    // Carica ricevute all'avvio
+    window.onload = function() {
+      caricaRicevute();
+    };
+
+    function caricaRicevute() {
+      const ricevute = JSON.parse(localStorage.getItem('glRicevuteFotografiche')) || [];
+      const lista = document.getElementById('listaRicevute');
+      lista.innerHTML = '';
+
+      if (ricevute.length === 0) {
+        lista.innerHTML = '<p style="text-align:center; color:#777;">Nessuna ricevuta salvata.</p>';
+        return;
+      }
+
+      ricevute.sort((a, b) => new Date(b.dataEvento) - new Date(a.dataEvento));
+
+      ricevute.forEach(r => {
+        const dataFormattata = new Date(r.dataEvento).toLocaleDateString('it-IT');
+        const importoFormattato = r.importo.toFixed(2).replace('.', ',');
+        const item = document.createElement('div');
+        item.className = 'archive-item';
+        item.innerHTML = `
+          <div>
+            <strong>${r.cliente}</strong><br>
+            <small>${dataFormattata} • ${r.servizio}</small>
+          </div>
+          <div>
+            <strong>€ ${importoFormattato}</strong>
+            <button class="btn" style="margin-left:10px; background:#3498db; color:white;" onclick="apriRicevuta(${r.id})">Apri</button>
+            <button class="btn" style="margin-left:10px; background:#e74c3c; color:white;" onclick="eliminaRicevuta(${r.id})">Elimina</button>
+          </div>
+        `;
+        lista.appendChild(item);
+      });
+    }
+
+    function apriRicevuta(id) {
+      localStorage.setItem('glRicevutaDaModificare', id);
+      window.open('ricevuta.html', '_blank');
+    }
+
+    function eliminaRicevuta(id) {
+      if (!confirm('⚠️ Sei sicuro di voler eliminare questa ricevuta?')) return;
+      let ricevute = JSON.parse(localStorage.getItem('glRicevuteFotografiche')) || [];
+      ricevute = ricevute.filter(r => r.id !== id);
+      localStorage.setItem('glRicevuteFotografiche', JSON.stringify(ricevute));
+      alert('✅ Ricevuta eliminata.');
+      caricaRicevute();
+    }
+
+    function filtraRicevute() {
+      const termine = document.getElementById('ricerca').value.toLowerCase().trim();
+      const items = document.querySelectorAll('.archive-item');
+      items.forEach(item => {
+        const testo = item.textContent.toLowerCase();
+        item.style.display = testo.includes(termine) ? 'flex' : 'none';
+      });
+    }
+
+    function backupDati() {
+      const ricevute = JSON.parse(localStorage.getItem('glRicevuteFotografiche')) || [];
+      if (ricevute.length === 0) {
+        alert('Nessun dato da esportare.');
+        return;
+      }
+      const data = {
+        version: 'G&L Ricevute Fotografiche v1.0',
+        exportDate: new Date().toISOString(),
+        ricevute
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `backup_ricevute_fotografiche_${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      alert('✅ Backup salvato!');
+    }
+
+    function ripristinaDati() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+      input.onchange = e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = event => {
+          try {
+            const data = JSON.parse(event.target.result);
+            if (!data.ricevute) throw new Error('File non valido');
+            if (!confirm(`Sovrascrivere tutti i dati con ${data.ricevute.length} ricevute?`)) return;
+            localStorage.setItem('glRicevuteFotografiche', JSON.stringify(data.ricevute));
+            alert('✅ Dati ripristinati!');
+            caricaRicevute();
+          } catch (err) {
+            alert('❌ Errore: file non valido.');
+          }
+        };
+        reader.readAsText(file);
+      };
+      input.click();
+    }
+  </script>
+</body>
+</html>
