@@ -104,7 +104,7 @@
 <body>
   <div class="container">
     <header>
-      <h1>📄 Nuova Ricevuta Fotografica</h1>
+      <h1 id="titoloPagina">📄 Nuova Ricevuta Fotografica</h1>
       <div class="studio-info">
         Studio Fotografico G&L • Via Ciarrocco, 21 – Canicattì (AG)<br>
         Tel: +39 366 9381103 | Email: weddinggel@aruba.it
@@ -170,6 +170,9 @@
   </div>
 
   <script>
+    let isModifica = false;
+    let ricevutaId = null;
+
     // Imposta data odierna di default
     document.getElementById('dataEvento').valueAsDate = new Date();
 
@@ -177,9 +180,12 @@
     window.onload = function() {
       const idDaModificare = localStorage.getItem('glRicevutaDaModificare');
       if (idDaModificare) {
+        isModifica = true;
+        ricevutaId = parseInt(idDaModificare);
         const ricevute = JSON.parse(localStorage.getItem('glRicevuteFotografiche')) || [];
-        const r = ricevute.find(x => x.id == idDaModificare);
+        const r = ricevute.find(x => x.id === ricevutaId);
         if (r) {
+          document.getElementById('titoloPagina').textContent = '✏️ Modifica Ricevuta';
           document.getElementById('cliente').value = r.cliente;
           document.getElementById('telefono').value = r.telefono;
           document.getElementById('facebook').value = r.facebook || '';
@@ -187,8 +193,8 @@
           document.getElementById('dataEvento').value = r.dataEvento;
           document.getElementById('importo').value = r.importo;
           document.getElementById('note').value = r.note || '';
-          localStorage.removeItem('glRicevutaDaModificare');
         }
+        localStorage.removeItem('glRicevutaDaModificare');
       }
     };
 
@@ -206,23 +212,44 @@
         return;
       }
 
-      const ricevuta = {
-        id: Date.now(),
-        cliente,
-        telefono,
-        facebook,
-        servizio,
-        dataEvento,
-        importo,
-        note,
-        dataSalvataggio: new Date().toISOString()
-      };
-
       const ricevute = JSON.parse(localStorage.getItem('glRicevuteFotografiche')) || [];
-      ricevute.push(ricevuta);
-      localStorage.setItem('glRicevuteFotografiche', JSON.stringify(ricevute));
 
-      alert('✅ Ricevuta salvata con successo!');
+      if (isModifica) {
+        // Aggiorna ricevuta esistente
+        const index = ricevute.findIndex(r => r.id === ricevutaId);
+        if (index !== -1) {
+          ricevute[index] = {
+            id: ricevutaId,
+            cliente,
+            telefono,
+            facebook,
+            servizio,
+            dataEvento,
+            importo,
+            note,
+            dataSalvataggio: new Date().toISOString()
+          };
+          localStorage.setItem('glRicevuteFotografiche', JSON.stringify(ricevute));
+          alert('✅ Ricevuta aggiornata con successo!');
+        }
+      } else {
+        // Nuova ricevuta
+        const nuovaRicevuta = {
+          id: Date.now(),
+          cliente,
+          telefono,
+          facebook,
+          servizio,
+          dataEvento,
+          importo,
+          note,
+          dataSalvataggio: new Date().toISOString()
+        };
+        ricevute.push(nuovaRicevuta);
+        localStorage.setItem('glRicevuteFotografiche', JSON.stringify(ricevute));
+        alert('✅ Ricevuta salvata con successo!');
+      }
+
       window.location.href = 'index.html';
     }
 
