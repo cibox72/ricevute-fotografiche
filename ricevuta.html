@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Nuova Ricevuta - G&L Studio</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #2c3e50;
+      --secondary: #3498db;
+      --light: #ecf0f1;
+      --success: #27ae60;
+      --danger: #e74c3c;
+      --border-radius: 8px;
+      --box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      background-color: #f5f7fa;
+      color: #333;
+      padding: 20px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: var(--border-radius);
+      box-shadow: var(--box-shadow);
+    }
+    header {
+      text-align: center;
+      margin-bottom: 30px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #eee;
+    }
+    h1 {
+      color: var(--primary);
+      font-size: 28px;
+    }
+    .studio-info {
+      color: #7f8c8d;
+      margin-top: 8px;
+      font-size: 16px;
+    }
+    .form-group {
+      margin-bottom: 22px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: var(--primary);
+    }
+    select, input, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+    .actions {
+      display: flex;
+      gap: 15px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 12px 25px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .btn:hover {
+      opacity: 0.9;
+    }
+    .btn-save {
+      background: var(--success);
+      color: white;
+    }
+    .btn-pdf {
+      background: var(--danger);
+      color: white;
+    }
+    .btn-back {
+      background: var(--secondary);
+      color: white;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📄 Nuova Ricevuta Fotografica</h1>
+      <div class="studio-info">
+        Studio Fotografico G&L • Via Ciarrocco, 21 – Canicattì (AG)<br>
+        Tel: +39 366 9381103 | Email: weddinggel@aruba.it
+      </div>
+    </header>
+
+    <div class="form-group">
+      <label for="cliente">Nome Cliente *</label>
+      <input type="text" id="cliente" placeholder="Inserisci nome e cognome del cliente">
+    </div>
+
+    <div class="form-group">
+      <label for="telefono">Telefono *</label>
+      <input type="tel" id="telefono" placeholder="Inserisci numero di telefono">
+    </div>
+
+    <div class="form-group">
+      <label for="facebook">Profilo Facebook (opzionale)</label>
+      <input type="text" id="facebook" placeholder="https://facebook.com/nomeutente">
+    </div>
+
+    <div class="form-group">
+      <label for="servizio">Servizio *</label>
+      <select id="servizio">
+        <option value="">Seleziona il servizio...</option>
+        <option value="Matrimonio">Matrimonio</option>
+        <option value="Battesimo">Battesimo</option>
+        <option value="Anniversario">Anniversario</option>
+        <option value="Compleanno">Compleanno</option>
+        <option value="Comunione">Comunione</option>
+        <option value="Cresima">Cresima</option>
+        <option value="Comunione e Cresima">Comunione e Cresima</option>
+        <option value="Carnevale">Carnevale</option>
+        <option value="Natale">Natale</option>
+        <option value="New Born">New Born</option>
+        <option value="Maternity">Maternity</option>
+        <option value="Smash Cake">Smash Cake</option>
+        <option value="Bagno di Latte">Bagno di Latte</option>
+        <option value="Anteprima">Anteprima</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="dataEvento">Data Evento *</label>
+      <input type="date" id="dataEvento">
+    </div>
+
+    <div class="form-group">
+      <label for="importo">Importo Ricevuto (€) *</label>
+      <input type="number" id="importo" placeholder="0,00" step="0.01">
+    </div>
+
+    <div class="form-group">
+      <label for="note">Note</label>
+      <textarea id="note" placeholder="Inserisci eventuali note o dettagli..."></textarea>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-back" onclick="window.location.href='index.html'">⬅️ Torna alla Dashboard</button>
+      <button class="btn btn-save" onclick="salvaRicevuta()">✅ Salva Ricevuta</button>
+      <button class="btn btn-pdf" onclick="generaPDF()">🖨️ PDF Doppia Ricevuta</button>
+    </div>
+  </div>
+
+  <script>
+    // Imposta data odierna di default
+    document.getElementById('dataEvento').valueAsDate = new Date();
+
+    // Carica ricevuta se si sta modificando
+    window.onload = function() {
+      const idDaModificare = localStorage.getItem('glRicevutaDaModificare');
+      if (idDaModificare) {
+        const ricevute = JSON.parse(localStorage.getItem('glRicevuteFotografiche')) || [];
+        const r = ricevute.find(x => x.id == idDaModificare);
+        if (r) {
+          document.getElementById('cliente').value = r.cliente;
+          document.getElementById('telefono').value = r.telefono;
+          document.getElementById('facebook').value = r.facebook || '';
+          document.getElementById('servizio').value = r.servizio;
+          document.getElementById('dataEvento').value = r.dataEvento;
+          document.getElementById('importo').value = r.importo;
+          document.getElementById('note').value = r.note || '';
+          localStorage.removeItem('glRicevutaDaModificare');
+        }
+      }
+    };
+
+    function salvaRicevuta() {
+      const cliente = document.getElementById('cliente').value.trim();
+      const telefono = document.getElementById('telefono').value.trim();
+      const facebook = document.getElementById('facebook').value.trim();
+      const servizio = document.getElementById('servizio').value;
+      const dataEvento = document.getElementById('dataEvento').value;
+      const importo = parseFloat(document.getElementById('importo').value);
+      const note = document.getElementById('note').value.trim();
+
+      if (!cliente || !telefono || !servizio || !dataEvento || isNaN(importo)) {
+        alert('⚠️ Compila tutti i campi obbligatori.');
+        return;
+      }
+
+      const ricevuta = {
+        id: Date.now(),
+        cliente,
+        telefono,
+        facebook,
+        servizio,
+        dataEvento,
+        importo,
+        note,
+        dataSalvataggio: new Date().toISOString()
+      };
+
+      const ricevute = JSON.parse(localStorage.getItem('glRicevuteFotografiche')) || [];
+      ricevute.push(ricevuta);
+      localStorage.setItem('glRicevuteFotografiche', JSON.stringify(ricevute));
+
+      alert('✅ Ricevuta salvata con successo!');
+      window.location.href = 'index.html';
+    }
+
+    function generaPDF() {
+      const cliente = document.getElementById('cliente').value.trim();
+      const telefono = document.getElementById('telefono').value.trim();
+      const facebook = document.getElementById('facebook').value.trim();
+      const servizio = document.getElementById('servizio').value;
+      const dataEvento = document.getElementById('dataEvento').value;
+      const importo = parseFloat(document.getElementById('importo').value);
+      const note = document.getElementById('note').value.trim();
+
+      if (!cliente || !telefono || !servizio || !dataEvento || isNaN(importo)) {
+        alert('⚠️ Compila tutti i campi obbligatori per generare il PDF.');
+        return;
+      }
+
+      const { jsPDF } = window.jspdf;
+      const pdf = new jsPDF('p', 'mm', 'a4');
+
+      // === RICEVUTA CLIENTE (parte superiore) ===
+      pdf.setFontSize(22);
+      pdf.text('Studio Fotografico G&L', 105, 20, null, null, 'center');
+      pdf.setFontSize(12);
+      pdf.text('Via Ciarrocco, 21 – Canicattì (AG)', 105, 28, null, null, 'center');
+      pdf.text('Tel: +39 366 9381103 | Email: weddinggel@aruba.it', 105, 34, null, null, 'center');
+      pdf.line(15, 40, 195, 40);
+
+      pdf.setFontSize(18);
+      pdf.text('RICEVUTA - COPIA CLIENTE', 105, 50, null, null, 'center');
+
+      pdf.setFontSize(14);
+      pdf.text(`Cliente: ${cliente}`, 20, 65);
+      pdf.text(`Telefono: ${telefono}`, 20, 73);
+      if (facebook) pdf.text(`Facebook: ${facebook}`, 20, 81);
+      
+      const yStart = facebook ? 91 : 89;
+      pdf.text(`Servizio: ${servizio}`, 20, yStart);
+      const dataFormattata = new Date(dataEvento).toLocaleDateString('it-IT');
+      pdf.text(`Data Evento: ${dataFormattata}`, 20, yStart + 8);
+      
+      const importoFormattato = importo.toFixed(2).replace('.', ',');
+      pdf.text(`Importo Ricevuto: € ${importoFormattato}`, 20, yStart + 16);
+
+      if (note.trim()) {
+        const yNote = yStart + 26;
+        pdf.text('Note:', 20, yNote);
+        const noteLines = pdf.splitTextToSize(note, 170);
+        pdf.text(noteLines, 20, yNote + 7);
+      }
+
+      pdf.setFontSize(10);
+      pdf.text('Grazie per la fiducia!', 105, 135, null, null, 'center');
+
+      // Linea divisoria
+      pdf.setLineWidth(0.5);
+      pdf.line(15, 140, 195, 140);
+
+      // === RICEVUTA STUDIO (parte inferiore) ===
+      pdf.setFontSize(18);
+      pdf.text('RICEVUTA - COPIA STUDIO', 105, 150, null, null, 'center');
+
+      pdf.setFontSize(14);
+      pdf.text(`Cliente: ${cliente}`, 20, 165);
+      pdf.text(`Telefono: ${telefono}`, 20, 173);
+      if (facebook) pdf.text(`Facebook: ${facebook}`, 20, 181);
+      
+      const yStart2 = facebook ? 191 : 189;
+      pdf.text(`Servizio: ${servizio}`, 20, yStart2);
+      pdf.text(`Data Evento: ${dataFormattata}`, 20, yStart2 + 8);
+      pdf.text(`Importo Ricevuto: € ${importoFormattato}`, 20, yStart2 + 16);
+
+      if (note.trim()) {
+        const yNote2 = yStart2 + 26;
+        pdf.text('Note:', 20, yNote2);
+        const noteLines2 = pdf.splitTextToSize(note, 170);
+        pdf.text(noteLines2, 20, yNote2 + 7);
+      }
+
+      pdf.setFontSize(10);
+      pdf.text('Documento fiscale ai fini contabili', 105, 285, null, null, 'center');
+
+      // Salva
+      const nomeFile = `Ricevuta_Doppia_${cliente.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`;
+      pdf.save(nomeFile);
+    }
+  </script>
+</body>
+</html>
